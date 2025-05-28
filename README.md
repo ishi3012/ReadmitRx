@@ -22,18 +22,6 @@ A production-grade ML system to **predict 30-day Emergency Department (ED) readm
 
 ---
 
-## 📁 Repository Structure
-
-```mermaid
-readmitrx/ # ML logic: pipeline, clustering, scoring, routing
-app/ # Frontend (Streamlit/FastAPI - WIP)
-models/ # Saved model artifacts or schema definitions
-scripts/ # Batch jobs, model training scripts
-tests/ # Unit tests (pytest)
-docs/ # Model cards, setup guides, README assets
-.github/ # CI workflows
-
-```
 
 --
 
