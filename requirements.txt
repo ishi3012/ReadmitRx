@@ -1,0 +1,14 @@
+# Core ML + Viz
+pandas==2.2.2
+scikit-learn==1.4.2
+xgboost==2.0.3
+lightgbm==4.3.0
+matplotlib==3.8.4
+seaborn==0.13.2
+
+# Dev Tools
+black==24.3.0
+ruff==0.4.4
+mypy==1.10.0
+pytest==8.1.1
+pre-commit==3.7.0

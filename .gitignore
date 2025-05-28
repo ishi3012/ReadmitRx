@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Pytest, coverage, and mypy caches
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Ruff and black caches
+.ruff_cache/
+
+# Model files and logs
+models/
+*.pkl
+*.joblib
+*.log
+*.h5
+*.onnx
+
+# Environment files
+.env
+.env.*
+
+# VS Code / Codespaces
+.vscode/
+.devcontainer/
+
+# macOS / Linux / Windows system files
+.DS_Store
+Thumbs.db
+
+# GitHub Codespaces Python interpreter
+python-language-server.cache/
