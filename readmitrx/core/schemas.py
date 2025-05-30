@@ -1,84 +1,154 @@
 """
-schemas.py — Typed data models for ED readmission prediction pipeline.
+schemas.py — Domain-agnostic, typed data models for predictive ML pipelines.
 
-This module defines standardized data contracts using Pydantic models
-for use across the preprocessing, modeling, clustering, and prediction
-components of the ReadmitRx pipeline.
+This module defines reusable, Pydantic-based schemas for structured data exchange
+across the ReadmitRx system. It supports input validation, feature engineering,
+clustering, and prediction results — while remaining portable across verticals
+such as healthcare, customer churn, and behavioral analytics.
 
 Features:
-- Validates raw clinical and CHW fields from de-identified ED data
-- Enables clear I/O structure for transformations and model input
-- Supports future extension with derived features (e.g., cluster_id)
+- General-purpose names: risk_score, resource_action_plan, record_id
+- Designed for ED readmission but extensible to churn or re-engagement domains
+- Modular schema layers for raw ingestion, feature generation, clustering, and prediction
+- Compatible with `mypy`, `pydantic`, and FastAPI validation
 
 Intended Use:
-- `RawEDVisit`: direct mapping from CSV input
-- `CleanedEDVisit`: after preprocessing & feature engineering
-- `ClusteredEDVisit`: after unsupervised grouping (e.g. KMeans)
-- `PredictionResult`: model prediction + routing outcome
+- `RawVisit`: structured representation of raw input data
+- `CleanedVisit`: after preprocessing and feature engineering
+- `ClusteredVisit`: adds unsupervised cluster ID
+- `PredictionResult`: model prediction + action plan fields
 
-Inputs:
-- Raw ED visit data (from Sinai de-identified Excel export)
-
-Outputs:
-- Typed Python objects used in downstream pipeline steps
-
-Functions/Classes:
-- RawEDVisit: minimally cleaned ED row
-- CleanedEDVisit: engineered features for training/inference
-- ClusteredEDVisit: adds unsupervised cluster ID
-- PredictionResult: structured model prediction output
-
-Args:
-    record_id (int): Unique visit or patient identifier
-    redcap_event_name (str): Longitudinal visit name (e.g., round_1_arm_1)
-    new_patient (bool): Whether this was the patient's first encounter
-    age (int): Patient's age
-    sex_gender (str): Self-reported sex/gender field
-    latino (int): Latino ethnicity flag (0 or 1)
-    language (str): Primary language
-    hypertension, asthma, diabetes (bool): Chronic condition flags
-    referral_date (date): Referral intake date
-    day_readmit (int): Days until readmission (target)
-
-Example Usage:
-    >>> from readmitrx.core.schemas import RawEDVisit
-    >>> visit = RawEDVisit(record_id=1, age=54, diabetes=True)
+Example:
+    >>> from readmitrx.core.schemas import RawVisit, PredictionResult
+    >>> visit = RawVisit(age=54, race_black=True, hypertension=True)
+    >>> result = PredictionResult(record_id=1, risk_score=0.87)
 
 Author: ReadmitRx Project Team (2025)
 """
 
 from pydantic import BaseModel
 from typing import Optional
-from datetime import date
 
 
-class RawEDVisit(BaseModel):
-    record_id: int
-    redcap_event_name: Optional[str]
-    new_patient: Optional[bool]
-    age: Optional[int]
-    sex_gender: Optional[str]
-    latino: Optional[str]
-    language: Optional[str]
-    hypertension: Optional[str]
-    asthma: Optional[str]
-    diabetes: Optional[str]
-    referral_date: Optional[date]
-    day_readmit: Optional[int]
+class RawVisit(BaseModel):
+    """
+    RawVisit — Domain-agnostic input schema representing raw visit data.
+
+    This schema captures the raw input features from the source dataset
+    in a generalized, reusable format suitable for both HealthTech and
+    other industry applications (e.g., churn modeling, customer retention).
+
+    Example:
+        RawVisit(age=34, hypertension=True, total_contact_attempts=3)
+    """
+
+    # Demographics
+
+    age: Optional[int] = None
+    sex_female: Optional[bool] = None
+    race_black: Optional[bool] = None
+    race_hispanic: Optional[bool] = None
+    race_other: Optional[bool] = None
+    language_non_english: Optional[bool] = None
+
+    # Clinical history
+    has_comorbidity: Optional[bool] = None
+    risk_condition_count: Optional[int] = None
+    hypertension: Optional[bool] = None
+    diabetes: Optional[bool] = None
+    asthma: Optional[bool] = None
+    sdoh_alcohol_risk: Optional[int] = None
+    sdoh_substance_risk: Optional[int] = None
+    sdoh_emotional_support_score: Optional[int] = None
+
+    # Visit metadata
+    days_until_event: Optional[int] = None
+    is_new_patient: Optional[bool] = None
+
+    # Contact & engagement
+    total_contact_attempts: Optional[int] = None
+    spoke_to_subject: Optional[bool] = None
+    engaged: Optional[bool] = None
+    referral_type_ed: Optional[bool] = None
+    referral_type_high_risk: Optional[bool] = None
+    referral_type_other: Optional[bool] = None
+    time_spent_minutes: Optional[float] = None
+    tme_spent_total: Optional[float] = None
+
+    # Insurance and PCP
+    insurance_na: Optional[bool] = None
+    insurance_public: Optional[bool] = None
+    insurance_uninsured: Optional[bool] = None
+    has_pcp_flag: Optional[bool] = None
+    has_insurance_flag: Optional[bool] = None
+    # SDoH needs
+
+    housing_insecure_flag: Optional[bool] = None
+    housing_insecure_secondary: Optional[bool] = None
+    fod_insecure_flag: Optional[bool] = None
+    utility_insecure_flag: Optional[bool] = None
+    transportation_barrier_flag: Optional[bool] = None
+    employment_status_code: Optional[int] = None
+    domestic_violence_risk: Optional[bool] = None
+    hiv_test_interest: Optional[bool] = None
+    covid_vaccine_signup: Optional[bool] = None
+    health_education_needed: Optional[bool] = None
+    sdoh_responded: Optional[bool] = None
+    has_unmet_needs: Optional[bool] = None
+    referrals_made: Optional[bool] = None
 
 
-class CleanedEDVisit(RawEDVisit):
-    has_chronic_condition: Optional[bool]
-    visit_month: Optional[int]
-    readmit_within_30: Optional[bool]
+class CleanedVisit(RawVisit):
+    """
+    CleanedVisit — Schema after preprocessing and feature engineering.
+
+    Extends:
+        RawVisit
+
+    Adds:
+    - readmit_within_30: Binary outcome for model training (e.g. churn or readmission)
+    - is_high_risk: Composite rule-based flag (optional)
+    - total_flags: Count of triggered risk indicators (SDoH, comorbidities, etc.)
+    """
+
+    readmit_within_30: Optional[bool] = None
+    is_high_risk: Optional[bool] = None
+    total_flags: Optional[int] = None
 
 
-class ClusteredEDVisist(CleanedEDVisit):
-    cluster_id: Optional[int]
+class ClusteredVisit(CleanedVisit):
+    """
+    ClusteredVisit — CleanedVisit schema plus clustering metadata.
+
+    Extends:
+        CleanedVisit
+
+    Adds:
+    - cluster_id: Segment/group assigned via unsupervised clustering
+    """
+
+    cluster_id: Optional[int] = None
 
 
 class PredictionResult(BaseModel):
+    """
+    PredictionResult — Output schema for model inference + routing.
+
+    Fields:
+    - record_id: Unique identifier for the user or visit
+    - risk_score: Predicted risk (e.g., of readmission, churn) between 0–1
+    - cluster_id: (Optional) Cluster membership
+    - resource_action_plan: Recommended intervention or action
+    - followup_required: Whether follow-up is needed
+    - resource_notes: Optional explanatory text for intervention
+
+    Example:
+        PredictionResult(record_id=101, risk_score=0.87, followup_required=True)
+    """
+
     record_id: int
-    readmit_probability: float
-    cluster_id: Optional[int]
-    chw_action: Optional[str]
+    risk_score: float
+    cluster_id: Optional[int] = None
+    resource_action_plan: Optional[str] = None
+    followup_required: Optional[bool] = None
+    resource_notes: Optional[str] = None

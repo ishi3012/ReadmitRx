@@ -3,13 +3,23 @@ repos:
     rev: 24.3.0
     hooks:
       - id: black
+        language_version: python3.12
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.4.4
     hooks:
       - id: ruff
+        language_version: python3.12
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.10.0
     hooks:
       - id: mypy
+        language_version: python3.12
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-ast
+      - id: check-yaml
+      - id: end-of-file-fixer
