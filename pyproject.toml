@@ -1,0 +1,36 @@
+[project]
+name = "readmitrx"
+version = "0.1.0"
+description = "ReadmitRx: ED readmission prediction pipeline"
+authors = [{ name = "ReadmitRx Team" }]
+dependencies = [
+    "scikit-learn>=1.6",
+    "pandas>=2.2",
+    "numpy>=2.2",
+    "pydantic>=2.11",
+    "pyyaml"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["readmitrx"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pydantic"
+ignore_missing_imports = true

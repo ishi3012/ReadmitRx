@@ -42,3 +42,5 @@ Thumbs.db
 
 # GitHub Codespaces Python interpreter
 python-language-server.cache/
+
+*.egg-info/

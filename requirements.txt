@@ -161,6 +161,8 @@ triton==2.2.0
     # via torch
 types-pytz==2025.2.0.20250516
     # via pandas-stubs
+types-pyyaml==6.0.12.20250516
+    # via -r requirements.in
 typing-extensions==4.13.2
     # via
     #   -r requirements.in
