@@ -16,6 +16,8 @@ repos:
     hooks:
       - id: mypy
         language_version: python3.12
+        args: ["--config-file=pyproject.toml"]
+        additional_dependencies: ["pydantic", "types-PyYAML", "pytest"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0

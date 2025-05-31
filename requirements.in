@@ -17,3 +17,4 @@ pre-commit>=3.6
 
 pandas-stubs>=2.2.3
 networkx==3.3
+types-PyYAML

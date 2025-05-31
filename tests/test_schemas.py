@@ -8,7 +8,7 @@ from readmitrx.core.schemas import (
 )
 
 
-def test_raw_visit_instantiation():
+def test_raw_visit_instantiation() -> None:
     visit = RawVisit(
         age=45,
         sex_female=True,
@@ -25,7 +25,7 @@ def test_raw_visit_instantiation():
     assert visit.is_new_patient is True
 
 
-def test_cleaned_visit_extends_raw():
+def test_cleaned_visit_extends_raw() -> None:
     visit = CleanedVisit(
         age=60,
         hypertension=True,
@@ -39,7 +39,7 @@ def test_cleaned_visit_extends_raw():
     assert visit.total_flags == 2
 
 
-def test_clustered_visit_extends_cleaned():
+def test_clustered_visit_extends_cleaned() -> None:
     visit = ClusteredVisit(
         age=30,
         asthma=True,
@@ -50,7 +50,7 @@ def test_clustered_visit_extends_cleaned():
     assert not visit.readmit_within_30
 
 
-def test_prediction_result_schema():
+def test_prediction_result_schema() -> None:
     result = PredictionResult(
         record_id=123,
         risk_score=0.92,
