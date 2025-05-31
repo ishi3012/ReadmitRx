@@ -7,14 +7,14 @@ features:
     - sdoh_alcohol_risk
     - sdoh_substance_risk
     - sdoh_emotional_support_score
-    - days_until_event
     - total_contact_attempts
     - time_spent_minutes
     - tme_spent_total
     - employment_status_code
     - total_flags
-  cat__:
-    - None  # Add categorical codes here if available later
+
+  cat__: []
+
   bin__:
     - sex_female
     - race_black
@@ -48,7 +48,6 @@ features:
     - sdoh_responded
     - has_unmet_needs
     - referrals_made
-    - readmit_within_30
     - is_high_risk
-  text__:
-    - None  # Add free-text fields if introduced later
+
+  text__: []

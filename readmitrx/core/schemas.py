@@ -43,7 +43,6 @@ class RawVisit(BaseModel):
     """
 
     # Demographics
-
     age: Optional[int] = None
     sex_female: Optional[bool] = None
     race_black: Optional[bool] = None
@@ -62,8 +61,8 @@ class RawVisit(BaseModel):
     sdoh_emotional_support_score: Optional[int] = None
 
     # Visit metadata
-    days_until_event: Optional[int] = None
     is_new_patient: Optional[bool] = None
+    visit_date: Optional[str] = None
 
     # Contact & engagement
     total_contact_attempts: Optional[int] = None
@@ -81,8 +80,8 @@ class RawVisit(BaseModel):
     insurance_uninsured: Optional[bool] = None
     has_pcp_flag: Optional[bool] = None
     has_insurance_flag: Optional[bool] = None
-    # SDoH needs
 
+    # SDoH needs
     housing_insecure_flag: Optional[bool] = None
     housing_insecure_secondary: Optional[bool] = None
     fod_insecure_flag: Optional[bool] = None
@@ -106,12 +105,10 @@ class CleanedVisit(RawVisit):
         RawVisit
 
     Adds:
-    - readmit_within_30: Binary outcome for model training (e.g. churn or readmission)
     - is_high_risk: Composite rule-based flag (optional)
     - total_flags: Count of triggered risk indicators (SDoH, comorbidities, etc.)
     """
 
-    readmit_within_30: Optional[bool] = None
     is_high_risk: Optional[bool] = None
     total_flags: Optional[int] = None
 

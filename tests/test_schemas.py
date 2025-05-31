@@ -31,11 +31,10 @@ def test_cleaned_visit_extends_raw() -> None:
         hypertension=True,
         is_new_patient=False,
         total_contact_attempts=3,
-        readmit_within_30=True,
         total_flags=2,
         is_high_risk=True,
     )
-    assert visit.readmit_within_30
+    assert visit.is_high_risk
     assert visit.total_flags == 2
 
 
@@ -43,11 +42,9 @@ def test_clustered_visit_extends_cleaned() -> None:
     visit = ClusteredVisit(
         age=30,
         asthma=True,
-        readmit_within_30=False,
         cluster_id=1,
     )
     assert visit.cluster_id == 1
-    assert not visit.readmit_within_30
 
 
 def test_prediction_result_schema() -> None:
