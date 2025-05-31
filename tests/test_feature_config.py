@@ -10,7 +10,7 @@ Validates:
 """
 
 import pytest
-
+from typing import cast
 from readmitrx.config.load_config import load_feature_config
 
 
@@ -25,7 +25,7 @@ def test_feature_config_keys_present() -> None:
     }, "Expected keys: num, cat, bin, text"
 
 
-@pytest.mark.parametrize("group", ["num", "cat", "bin", "text"])
+@pytest.mark.parametrize("group", cast(list[str], ["num", "cat", "bin", "text"]))
 def test_feature_values_are_strings(group: str) -> None:
     config = load_feature_config()
     for feature in config[group]:
