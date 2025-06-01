@@ -11,8 +11,8 @@ features:
     - sdoh_substance_risk
     - sdoh_emotional_support_score
 
-  cat__:
-    - employment_status_code
+  cat__: []
+    
 
   bin__:
     - sex
@@ -48,5 +48,6 @@ features:
     - has_unmet_needs
     - referrals_made
     - is_high_risk
+    - is_employed_flag
 
   text__: []
