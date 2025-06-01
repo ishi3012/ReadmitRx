@@ -18,8 +18,14 @@ pre-commit>=3.6
 pandas-stubs>=2.2.3
 networkx==3.3
 
+# ML model libraries
+catboost>=1.2
+lightgbm>=4.3
+xgboost>=2.0
+joblib>=1.3
 
 # Typing stubs required for mypy + pre-commit
 pandas-stubs
 types-PyYAML
 types-pytz
+pytest-cov>=4.1.0

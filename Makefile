@@ -13,3 +13,6 @@ typecheck:
 	mypy readmitrx tests
 
 check: format lint typecheck test
+coverage:
+	pytest --cov=readmitrx --cov-report=term-missing
+	pytest --cov=readmitrx --cov-report=html

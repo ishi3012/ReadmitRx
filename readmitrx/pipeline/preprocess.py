@@ -2,39 +2,31 @@
 preprocess.py — Modular preprocessing pipeline for ReadmitRx.
 
 This module builds a configurable, domain-agnostic sklearn pipeline that transforms
-raw input features into model-ready format. Feature groups are passed explicitly or
-derived from config.
+raw input features into model-ready format. Feature groups are loaded dynamically
+from a YAML config.
 
 Features:
 - Supports numerical, categorical, binary, and text features
-- Implements `ColumnTransformer` with prefix-based feature routing
-- Returns NumPy arrays and preserves feature names for explainability
-
-Intended Use:
-- `build_column_transformer()`: returns sklearn ColumnTransformer based on feature groups
-- `Preprocessor`: wrapper class for fit/transform and feature name extraction
+- Implements `ColumnTransformer` with prefix-based routing
+- Applies feature engineering before transformation
+- Saves enriched DataFrame + transformed NumPy arrays
+- Logs all pipeline stages for reproducibility
 
 Inputs:
-- Pandas DataFrame with prefixed feature columns (e.g., num__age, cat__insurance_type)
+- CSV: data/raw_visits.csv
+- YAML config: config/feature_config.yaml
 
 Outputs:
-- Transformed NumPy array + list of feature names
-
-Functions:
-- build_column_transformer(num, cat, bin, text) → ColumnTransformer
-- Preprocessor.fit_transform(df) → (np.ndarray, List[str])
-- Preprocessor.transform(df) → (np.ndarray, List[str])
-- Preprocessor.get_feature_names_out() → List[str]
+- Processed CSV: data/processed_visits.csv
+- Transformed arrays: data/final_X.npy, data/final_y.npy
 
 Example:
-    >>> from readmitrx.pipeline.preprocess import Preprocessor
-    >>> df = pd.read_csv("sinai_synthetic_data.csv")
-    >>> preprocessor = Preprocessor()
-    >>> X, feature_names = preprocessor.fit_transform(df)
+    >>> python -m readmitrx.pipeline.preprocess
 
 Author: ReadmitRx Project Team (2025)
 """
 
+import yaml
 import numpy as np
 import pandas as pd
 from typing import List, Tuple, Optional
@@ -44,11 +36,36 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 
-
 from readmitrx.utils.logging import configure_logging
+from readmitrx.config.paths import (
+    INPUT_DATA,
+    PROCESSED_DATA,
+    FEATURE_CONFIG_PATH,
+    FINAL_X_TRANFORMED,
+    FINAL_y,
+)
+from readmitrx.pipeline.feature_engineering import apply_feature_engineering
 
-# Initialize logging
+# Initialize logger
 logger = configure_logging("preprocessor", "preprocessing.log")
+
+
+def load_feature_config(
+    config_path: str = str(FEATURE_CONFIG_PATH),
+) -> Tuple[List[str], List[str], List[str], List[str]]:
+    logger.info(f"Load features config file : {config_path}")
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    features = config.get("features", {})
+    num = features.get("num__", [])
+    cat = features.get("cat__", [])
+    bin_ = features.get("bin__", [])
+    text = features.get("text__", [])
+    logger.info(
+        f"Loaded {len(num)} numerical, {len(cat)} categorical, {len(bin_)} binary features."
+    )
+    return num, cat, bin_, text
 
 
 def build_column_transformer(
@@ -57,19 +74,6 @@ def build_column_transformer(
     bin_features: List[str],
     text_features: Optional[List[str]] = None,
 ) -> ColumnTransformer:
-    """
-    Builds a ColumnTransformer for mixed-type feature processing.
-
-    Args:
-        num_features: List of numerical feature names (prefixed with 'num__')
-        cat_features: List of categorical feature names (prefixed with 'cat__')
-        bin_features: List of binary feature names (prefixed with 'bin__')
-        text_features: Optional list of text feature names (prefixed with 'text__')
-
-    Returns:
-        sklearn.compose.ColumnTransformer
-    """
-
     transformers = []
 
     if num_features:
@@ -111,19 +115,81 @@ def build_column_transformer(
         transformers.append(("text", text_pipeline, text_features))
 
     return ColumnTransformer(
-        transformers=transformers,
-        remainder="drop",
-        verbose_feature_names_out=False,
+        transformers=transformers, remainder="drop", verbose_feature_names_out=False
     )
 
 
+def run_preprocessing_pipeline(
+    input_csv: str = str(INPUT_DATA),
+    processed_csv: str = str(PROCESSED_DATA),
+    config_path: str = str(FEATURE_CONFIG_PATH),
+) -> None:
+    logger.info(f"Loading raw data from {input_csv}")
+    df = pd.read_csv(input_csv)
+
+    if "readmitted" not in df.columns:
+        logger.error("Target column 'readmitted' not found in input.")
+        raise ValueError("Target column 'readmitted' not found in input.")
+
+    logger.info(f"Initial shape: {df.shape}")
+    df = apply_feature_engineering(df)
+    df = clean_features(df)
+    logger.info(f"Post feature-engineering shape: {df.shape}")
+
+    X_df = df.drop(columns=["readmitted"])
+    y = df["readmitted"].astype(int)
+
+    num_features, cat_features, bin_features, text_features = load_feature_config(
+        config_path
+    )
+
+    missing = [
+        col
+        for col in num_features + cat_features + bin_features
+        if col not in X_df.columns
+    ]
+    if missing:
+        logger.error(f"Missing required features in input data: {missing}")
+        raise ValueError(f"Missing required features in input data: {missing}")
+
+    preprocessor = Preprocessor(num_features, cat_features, bin_features, text_features)
+    X_transformed, _ = preprocessor.fit_transform(X_df)
+
+    df.to_csv(processed_csv, index=False)
+    np.save(FINAL_y, y.to_numpy())
+    np.save(FINAL_X_TRANFORMED, X_transformed)
+
+    logger.info(f"Saved enriched DataFrame to: {processed_csv}")
+    logger.info("Saved transformed arrays to: data/final_X.npy, data/final_y.npy")
+    logger.info("Preprocessing pipeline completed successfully.")
+
+
+def clean_features(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.loc[:, ~df.columns.duplicated()]
+
+    df.rename(
+        columns={
+            "healthedneeds_1.0": "healthneeds_1.0",
+            "healthedneeds_0.0": "healthneeds_0.0",
+            "healthedneeds_na": "healthneeds_na",
+        },
+        inplace=True,
+    )
+
+    contact_cols = [col for col in df.columns if col.startswith("sumContacts_")]
+    if contact_cols:
+        df["total_contacts"] = df[contact_cols].sum(axis=1)
+        df["any_contacts_made"] = df["total_contacts"].gt(0).astype(int)
+        df.drop(columns=contact_cols, inplace=True)
+
+    numeric_df = df.select_dtypes(include=["number"])
+    bin_cols = numeric_df.columns[numeric_df.max() <= 1]
+    df[bin_cols] = df[bin_cols].astype(int)
+
+    return df
+
+
 class Preprocessor:
-    """
-    Preprocessor — Wrapper around sklearn ColumnTransformer with fit/transform support.
-
-    Tracks transformed feature names for use in modeling and explainability (e.g., SHAP).
-    """
-
     def __init__(
         self,
         num_features: List[str],
@@ -136,21 +202,13 @@ class Preprocessor:
         logger.info(f"  Categorical: {cat_features}")
         logger.info(f"  Binary: {bin_features}")
         logger.info(f"  Text: {text_features if text_features else 'None'}")
+
         self.column_transformer = build_column_transformer(
             num_features, cat_features, bin_features, text_features
         )
         self._feature_names: Optional[List[str]] = None
 
     def fit_transform(self, df: pd.DataFrame) -> Tuple[NDArray[np.float64], List[str]]:
-        """
-        Fits the transformer and applies it to the input DataFrame.
-
-        Args:
-            df: Raw input DataFrame
-
-        Returns:
-            Tuple of (X_transformed, feature_names)
-        """
         logger.info(f"Fitting and transforming data with shape: {df.shape}")
         X = self.column_transformer.fit_transform(df)
         try:
@@ -161,21 +219,11 @@ class Preprocessor:
                 "Some transformers do not support get_feature_names_out(). "
                 "Generated generic feature names."
             )
-
         logger.info(f"Output shape: {X.shape}")
         logger.info(f"First 5 transformed feature names: {self._feature_names[:5]}")
         return X, self._feature_names
 
     def transform(self, df: pd.DataFrame) -> Tuple[NDArray[np.float64], List[str]]:
-        """
-        Applies transformation using previously fit ColumnTransformer.
-
-        Args:
-            df: Raw input DataFrame
-
-        Returns:
-            Tuple of (X_transformed, feature_names)
-        """
         if self._feature_names is None:
             logger.error("transform() called before fit_transform().")
             raise ValueError("Must call fit_transform before transform.")
@@ -185,14 +233,11 @@ class Preprocessor:
         return X, self._feature_names
 
     def get_feature_names_out(self) -> List[str]:
-        """
-        Returns feature names from the latest transformation.
-
-        Returns:
-            List of transformed feature names
-        """
-
         if self._feature_names is None:
             logger.error("get_feature_names_out() called before fit_transform().")
             raise ValueError("No features available — call fit_transform() first.")
         return self._feature_names
+
+
+if __name__ == "__main__":
+    run_preprocessing_pipeline()

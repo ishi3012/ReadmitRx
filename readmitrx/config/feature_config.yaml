@@ -3,20 +3,19 @@
 features:
   num__:
     - age
-    - risk_condition_count
+    - visit_month
+    - chronic_count
+    - time_spent_minutes
+    - time_spent_total
     - sdoh_alcohol_risk
     - sdoh_substance_risk
     - sdoh_emotional_support_score
-    - total_contact_attempts
-    - time_spent_minutes
-    - tme_spent_total
-    - employment_status_code
-    - total_flags
 
-  cat__: []
+  cat__:
+    - employment_status_code
 
   bin__:
-    - sex_female
+    - sex
     - race_black
     - race_hispanic
     - race_other
@@ -37,10 +36,10 @@ features:
     - has_pcp_flag
     - has_insurance_flag
     - housing_insecure_flag
-    - housing_insecure_secondary
-    - fod_insecure_flag
+    # - housing_insecure_secondary
+    - food_insecure_flag
     - utility_insecure_flag
-    - transportation_barrier_flag
+    - transportation_insecure_flag
     - domestic_violence_risk
     - hiv_test_interest
     - covid_vaccine_signup
