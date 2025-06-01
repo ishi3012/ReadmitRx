@@ -26,7 +26,7 @@ Author: ReadmitRx Project Team (2025)
 """
 
 import json
-import joblib  # type: ignore[import-untyped]
+import joblib
 import numpy as np
 import pandas as pd
 from typing import Tuple, List, Dict, cast
@@ -37,7 +37,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import roc_auc_score, f1_score, recall_score, accuracy_score
 from sklearn.base import ClassifierMixin
-from catboost import CatBoostClassifier  # type: ignore
+from catboost import CatBoostClassifier
 
 from readmitrx.utils.logging import configure_logging
 from readmitrx.config.paths import (

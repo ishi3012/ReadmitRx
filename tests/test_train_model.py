@@ -6,7 +6,7 @@ from collections.abc import Generator
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from catboost import CatBoostClassifier  # type: ignore[import-untyped]
+from catboost import CatBoostClassifier
 from sklearn.base import ClassifierMixin
 from sklearn.datasets import make_classification
 
