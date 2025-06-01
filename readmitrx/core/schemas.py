@@ -135,17 +135,18 @@ class PredictionResult(BaseModel):
     - record_id: Unique identifier for the user or visit
     - risk_score: Predicted risk (e.g., of readmission, churn) between 0–1
     - cluster_id: (Optional) Cluster membership
+    - cluster_label: (Optional) Human-readable segment label
+    - cluster_description: (Optional) Label explanation
     - resource_action_plan: Recommended intervention or action
     - followup_required: Whether follow-up is needed
     - resource_notes: Optional explanatory text for intervention
-
-    Example:
-        PredictionResult(record_id=101, risk_score=0.87, followup_required=True)
     """
 
     record_id: int
     risk_score: float
     cluster_id: Optional[int] = None
+    cluster_label: Optional[str] = None
+    cluster_description: Optional[str] = None
     resource_action_plan: Optional[str] = None
     followup_required: Optional[bool] = None
     resource_notes: Optional[str] = None
