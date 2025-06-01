@@ -5,6 +5,9 @@ scipy>=1.15
 torch==2.2.0
 matplotlib>=3.7
 seaborn>=0.13
+umap-learn>=0.5.5
+hdbscan>=0.8.30
+
 
 pydantic>=2.11
 typing_extensions>=4.12

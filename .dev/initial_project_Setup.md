@@ -127,6 +127,8 @@ jobs:
 ```bash
 tree readmitrx/ -L 2
 
+pip install pip-tools
+
 pip-compile --output-file=requirements.txt requirements.in
 
 pytest --cov=readmitrx --cov-report=term-missing
@@ -134,6 +136,15 @@ pytest --cov=readmitrx --cov-report=term-missing
 pytest --cov=readmitrx --cov-report=html
 
 make coverage
+```
 
+```bash
+df -h
+
+#If you want to find out what is using space inside your workspace:
+du -sh *
+
+#Or recursively, sorted:
+du -ah . | sort -rh | head -n 20
 
 ```

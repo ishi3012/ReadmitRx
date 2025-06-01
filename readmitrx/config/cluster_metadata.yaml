@@ -1,0 +1,13 @@
+cluster_labels_v1:
+  0:
+    label: high_risk_patient_team
+    description: "Older adults with multiple chronic conditions and housing insecurity"
+  1:
+    label: low_priority
+    description: "Stable patients with high engagement and minimal SDoH risk"
+  2:
+    label: behavioral_insecurity_team
+    description: "Patients with emotional, alcohol, or substance abuse risks"
+  3:
+    label: monitor_only
+    description: "Moderate risk patients with SDoH and chronic conditions"
