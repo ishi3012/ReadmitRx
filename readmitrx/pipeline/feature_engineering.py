@@ -214,12 +214,9 @@ def add_socio_behavioral_features(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     # Employment status
-    if "sdoh_employ_1.0" in df.columns and "sdoh_employ_4.0" in df.columns:
-        df["employment_status_code"] = (
-            df["sdoh_employ_1.0"].fillna(0).astype(int) * 1
-            + df["sdoh_employ_4.0"].fillna(0).astype(int) * 4
-        ).astype("Int64")
-        logger.info("Derived employment_status_code")
+    if "sdoh_employ_1.0" in df.columns:
+        df["is_employed_flag"] = df["sdoh_employ_1.0"].fillna(0).astype(int)
+        logger.info("Derived is_employed_flag from sdoh_employ_1.0")
 
     return df
 

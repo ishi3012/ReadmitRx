@@ -50,3 +50,5 @@ data/*
 
 # Except input_data.csv
 !data/input_data.csv
+catboost_info/catboost_training.json
+catboost_info/catboost_training.json

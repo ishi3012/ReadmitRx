@@ -10,18 +10,17 @@ Features:
 - Implements `ColumnTransformer` with prefix-based routing
 - Applies feature engineering before transformation
 - Saves enriched DataFrame + transformed NumPy arrays
+- Saves final feature names to `final_feature_names.npy`
 - Logs all pipeline stages for reproducibility
 
 Inputs:
-- CSV: data/raw_visits.csv
+- CSV: data/input_data.csv
 - YAML config: config/feature_config.yaml
 
 Outputs:
 - Processed CSV: data/processed_visits.csv
 - Transformed arrays: data/final_X.npy, data/final_y.npy
-
-Example:
-    >>> python -m readmitrx.pipeline.preprocess
+- Feature names: data/final_feature_names.npy
 
 Author: ReadmitRx Project Team (2025)
 """
@@ -115,7 +114,7 @@ def build_column_transformer(
         transformers.append(("text", text_pipeline, text_features))
 
     return ColumnTransformer(
-        transformers=transformers, remainder="drop", verbose_feature_names_out=False
+        transformers=transformers, remainder="drop", verbose_feature_names_out=True
     )
 
 
@@ -128,7 +127,6 @@ def run_preprocessing_pipeline(
     df = pd.read_csv(input_csv)
 
     if "readmitted" not in df.columns:
-        logger.error("Target column 'readmitted' not found in input.")
         raise ValueError("Target column 'readmitted' not found in input.")
 
     logger.info(f"Initial shape: {df.shape}")
@@ -149,18 +147,25 @@ def run_preprocessing_pipeline(
         if col not in X_df.columns
     ]
     if missing:
-        logger.error(f"Missing required features in input data: {missing}")
         raise ValueError(f"Missing required features in input data: {missing}")
 
     preprocessor = Preprocessor(num_features, cat_features, bin_features, text_features)
-    X_transformed, _ = preprocessor.fit_transform(X_df)
+    X_transformed, feature_names = preprocessor.fit_transform(X_df)
 
+    # Save outputs
     df.to_csv(processed_csv, index=False)
     np.save(FINAL_y, y.to_numpy())
     np.save(FINAL_X_TRANFORMED, X_transformed)
+    np.save(
+        FINAL_X_TRANFORMED.with_name("final_feature_names.npy"), np.array(feature_names)
+    )
 
     logger.info(f"Saved enriched DataFrame to: {processed_csv}")
-    logger.info("Saved transformed arrays to: data/final_X.npy, data/final_y.npy")
+    logger.info(f"Saved transformed X to: {FINAL_X_TRANFORMED}")
+    logger.info(f"Saved target y to: {FINAL_y}")
+    logger.info(
+        f"Saved feature names to: {FINAL_X_TRANFORMED.with_name('final_feature_names.npy')}"
+    )
     logger.info("Preprocessing pipeline completed successfully.")
 
 
@@ -196,14 +201,11 @@ class Preprocessor:
         cat_features: List[str],
         bin_features: List[str],
         text_features: Optional[List[str]] = None,
-    ):
-        logger.info("Initializing Preprocessor with features:")
-        logger.info(f"  Numerical: {num_features}")
-        logger.info(f"  Categorical: {cat_features}")
-        logger.info(f"  Binary: {bin_features}")
-        logger.info(f"  Text: {text_features if text_features else 'None'}")
-
-        self.column_transformer = build_column_transformer(
+    ) -> None:
+        logger.info(
+            f"Initializing Preprocessor with features: {num_features + cat_features + bin_features}"
+        )
+        self.column_transformer: ColumnTransformer = build_column_transformer(
             num_features, cat_features, bin_features, text_features
         )
         self._feature_names: Optional[List[str]] = None
@@ -211,30 +213,42 @@ class Preprocessor:
     def fit_transform(self, df: pd.DataFrame) -> Tuple[NDArray[np.float64], List[str]]:
         logger.info(f"Fitting and transforming data with shape: {df.shape}")
         X = self.column_transformer.fit_transform(df)
-        try:
-            self._feature_names = list(self.column_transformer.get_feature_names_out())
-        except AttributeError:
-            self._feature_names = [f"feature_{i}" for i in range(X.shape[1])]
-            logger.warning(
-                "Some transformers do not support get_feature_names_out(). "
-                "Generated generic feature names."
-            )
+        self._feature_names = []
+
+        for name, transformer, cols in self.column_transformer.transformers:
+            if name == "remainder":
+                continue
+            # Handle Pipeline
+            if hasattr(transformer, "steps"):
+                last_step = transformer.steps[-1][1]
+                if hasattr(last_step, "get_feature_names_out"):
+                    try:
+                        names = last_step.get_feature_names_out(cols)
+                    except Exception:
+                        names = [f"{name}__{col}" for col in cols]
+                else:
+                    names = [f"{name}__{col}" for col in cols]
+            elif hasattr(transformer, "get_feature_names_out"):
+                try:
+                    names = transformer.get_feature_names_out(cols)
+                except Exception:
+                    names = [f"{name}__{col}" for col in cols]
+            else:
+                names = [f"{name}__{col}" for col in cols]
+            self._feature_names.extend(names)
+
         logger.info(f"Output shape: {X.shape}")
-        logger.info(f"First 5 transformed feature names: {self._feature_names[:5]}")
+        logger.info(f"Transformed feature names: {self._feature_names}")
         return X, self._feature_names
 
     def transform(self, df: pd.DataFrame) -> Tuple[NDArray[np.float64], List[str]]:
         if self._feature_names is None:
-            logger.error("transform() called before fit_transform().")
             raise ValueError("Must call fit_transform before transform.")
-        logger.info(f"Transforming data with shape: {df.shape}")
         X = self.column_transformer.transform(df)
-        logger.info(f"Output shape: {X.shape}")
         return X, self._feature_names
 
     def get_feature_names_out(self) -> List[str]:
         if self._feature_names is None:
-            logger.error("get_feature_names_out() called before fit_transform().")
             raise ValueError("No features available — call fit_transform() first.")
         return self._feature_names
 
