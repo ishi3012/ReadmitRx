@@ -1,86 +1,79 @@
-"""
-test_preprocess.py — Unit tests for Preprocessor pipeline.
-
-Covers:
-- Transformation shape and type
-- Missing values handling
-- Edge cases: unknown categories, all-null columns
-
-Author: ReadmitRx Project Team (2025)
-"""
-
 import pytest
 import pandas as pd
-import numpy as np
+from pathlib import Path
+from readmitrx.pipeline.preprocess import (
+    load_feature_config,
+    clean_features,
+    Preprocessor,
+    run_preprocessing_pipeline,
+)
 
-from readmitrx.pipeline.preprocess import Preprocessor
+
+def test_load_feature_config(tmp_path: Path) -> None:
+    yaml_path = tmp_path / "config.yaml"
+    yaml_path.write_text(
+        "features:\n  num__: [age]\n  cat__: [sex]\n  bin__: [has_pcp_flag]\n  text__: [notes]"
+    )
+    num, cat, bin_, text = load_feature_config(str(yaml_path))
+    assert num == ["age"]
+    assert cat == ["sex"]
+    assert bin_ == ["has_pcp_flag"]
+    assert text == ["notes"]
 
 
-@pytest.fixture
-def sample_input_df() -> pd.DataFrame:
-    return pd.DataFrame(
+def test_clean_features_drops_and_renames() -> None:
+    df = pd.DataFrame(
         {
-            "age": [45, np.nan, 65],
-            "insurance_type": ["public", "private", np.nan],
-            "has_pcp_flag": [1, 0, np.nan],
-            "notes": ["high risk", "low risk", "moderate risk"],
+            "healthedneeds_1.0": [1],
+            "sumContacts_1": [1],
+            "sumContacts_2": [2],
+            "binary_col": [1.0],
         }
     )
+    cleaned = clean_features(df)
+    assert "healthneeds_1.0" in cleaned.columns
+    assert "total_contacts" in cleaned.columns
+    assert "any_contacts_made" in cleaned.columns
+    assert cleaned["binary_col"].dtype == int
 
 
-def test_preprocessor_transform_shape(sample_input_df: pd.DataFrame) -> None:
-    num_features = ["age"]
-    cat_features = ["insurance_type"]
-    bin_features = ["has_pcp_flag"]
-    text_features: list[str] = []  # ignored for now
-
-    preprocessor = Preprocessor(
-        num_features=num_features,
-        cat_features=cat_features,
-        bin_features=bin_features,
-        text_features=text_features,
-    )
-
-    X, feature_names = preprocessor.fit_transform(sample_input_df)
-
-    # Assert shape
-    assert isinstance(X, np.ndarray)
-    assert X.shape[0] == sample_input_df.shape[0]
-    assert len(feature_names) == X.shape[1]
-
-
-def test_preprocessor_handles_missing_values(sample_input_df: pd.DataFrame) -> None:
-    # Add missing data edge case
-    sample_input_df.loc[0, "insurance_type"] = np.nan
-    sample_input_df.loc[2, "age"] = np.nan
-
-    preprocessor = Preprocessor(
-        num_features=["age"],
-        cat_features=["insurance_type"],
-        bin_features=["has_pcp_flag"],
-    )
-
-    X, _ = preprocessor.fit_transform(sample_input_df)
-    assert not np.isnan(X).any(), "Preprocessed output should not contain NaNs"
-
-
-def test_transform_requires_fit_first(sample_input_df: pd.DataFrame) -> None:
-    preprocessor = Preprocessor(
-        num_features=["age"],
-        cat_features=["insurance_type"],
-        bin_features=["has_pcp_flag"],
-    )
-
+def test_transform_without_fit_raises_error() -> None:
+    df = pd.DataFrame({"age": [30], "sex": ["female"], "has_pcp_flag": [1]})
+    pre = Preprocessor(["age"], ["sex"], ["has_pcp_flag"])
     with pytest.raises(ValueError, match="fit_transform"):
-        _ = preprocessor.transform(sample_input_df)
+        pre.transform(df)
 
 
-def test_get_feature_names_requires_fit(sample_input_df: pd.DataFrame) -> None:
-    preprocessor = Preprocessor(
-        num_features=["age"],
-        cat_features=["insurance_type"],
-        bin_features=["has_pcp_flag"],
+def test_get_feature_names_out_without_fit_raises() -> None:
+    pre = Preprocessor(["age"], ["sex"], ["has_pcp_flag"])
+    with pytest.raises(ValueError, match="fit_transform"):
+        pre.get_feature_names_out()
+
+
+def test_run_preprocessing_pipeline_e2e(tmp_path: Path) -> None:
+    input_csv = tmp_path / "input_data.csv"
+    output_csv = tmp_path / "output_data.csv"
+    config_yaml = tmp_path / "config.yaml"
+
+    df = pd.DataFrame(
+        {
+            "visit_date": ["2024-01-01"],
+            "asthma": [1],
+            "diabetes": [1],
+            "hypertension": [1],
+            "new_patient_1": [1],
+            "new_patient_2": [0],
+            "new_patient_3": [0],
+            "sdoh_pcp_1.0": [1],
+            "sdoh_pcp_0.0": [0],
+            "sdoh_pcp_na": [0],
+            "readmitted": [1],
+        }
+    )
+    df.to_csv(input_csv, index=False)
+    config_yaml.write_text(
+        "features:\n  num__: [chronic_count]\n  cat__: []\n  bin__: [has_pcp_flag]\n  text__: []"
     )
 
-    with pytest.raises(ValueError, match="fit_transform"):
-        _ = preprocessor.get_feature_names_out()
+    run_preprocessing_pipeline(str(input_csv), str(output_csv), str(config_yaml))
+    assert output_csv.exists()

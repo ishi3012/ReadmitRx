@@ -126,4 +126,14 @@ jobs:
 
 ```bash
 tree readmitrx/ -L 2
+
+pip-compile --output-file=requirements.txt requirements.in
+
+pytest --cov=readmitrx --cov-report=term-missing
+
+pytest --cov=readmitrx --cov-report=html
+
+make coverage
+
+
 ```

@@ -44,3 +44,9 @@ Thumbs.db
 python-language-server.cache/
 
 *.egg-info/
+
+# Ignore everything in /data
+data/*
+
+# Except input_data.csv
+!data/input_data.csv
